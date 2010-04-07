@@ -475,9 +475,8 @@ QuickSearch::ShowPattern(wchar_t const * message /*= 0*/)
 {
 	std::wostringstream oss;
 	oss << L"/" << patterns_[0];
-	if (!patterns_[1].empty() || activePattern_ == 1)
+	if (activePattern_ == 1)
 	{
-		if (activePattern_ == 0) oss << L"_";
 		oss << wchar_t(0x2026) << patterns_[1];
 	}
 	if (message) oss << message;
