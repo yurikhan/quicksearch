@@ -151,6 +151,7 @@ private:
 	bool ProcessKey(KEY_EVENT_RECORD const & key);
 	bool ProcessMouse(MOUSE_EVENT_RECORD const & mouse);
 
+	bool IsModifierKey(KEY_EVENT_RECORD const & key) const;
 	bool IsCharKey(KEY_EVENT_RECORD const & key) const;
 public:
 	explicit QuickSearch(bool backward);
@@ -252,6 +253,8 @@ QuickSearch::ProcessKey(KEY_EVENT_RECORD const & key)
 {
 	if (!key.bKeyDown) return true;
 
+	if (IsModifierKey(key)) return true;
+
 	static DWORD const SHIFT_MASK = SHIFT_PRESSED
 		| LEFT_CTRL_PRESSED | RIGHT_CTRL_PRESSED
 		| LEFT_ALT_PRESSED  | RIGHT_ALT_PRESSED;
@@ -300,6 +303,33 @@ bool
 QuickSearch::ProcessMouse(MOUSE_EVENT_RECORD const & mouse)
 {
 	return mouse.dwButtonState == 0; // as long as they don't click anything, ignore and consume
+}
+
+template <typename InIter, typename T> bool
+exist(InIter begin, InIter end, T const & value)
+{
+	return end != std::find(begin, end, value);
+}
+
+template <typename T, size_t n> bool
+exist(T const (&ar)[n], T const & value)
+{
+	return exist(ar + 0, ar + n, value);
+}
+
+bool
+QuickSearch::IsModifierKey(KEY_EVENT_RECORD const & key) const
+{
+	static WORD const modifierKeys[] =
+	{
+		VK_LSHIFT,   VK_RSHIFT,   VK_SHIFT,
+		VK_LCONTROL, VK_RCONTROL, VK_CONTROL,
+		VK_LMENU,    VK_RMENU,    VK_MENU,
+		VK_LWIN,     VK_RWIN,
+		VK_NUMLOCK,  VK_CAPITAL,  VK_SCROLL,
+	};
+
+	return exist(modifierKeys, key.wVirtualKeyCode);
 }
 
 bool
