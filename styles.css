@@ -1,0 +1,21 @@
+a img
+{
+  border: none;
+}
+h2
+{
+  clear: both;
+  border-top: solid 1px black;
+}
+li.feature
+{
+  list-style-type: disc;
+}
+li.bugfix
+{
+  list-style-type: circle;
+}
+li.modification
+{
+  list-style-type: square;
+}
