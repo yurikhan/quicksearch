@@ -5,6 +5,7 @@
 #include <sstream>
 #include <iomanip>
 #include <algorithm>
+#include <functional>
 
 #include <windows.h>
 
@@ -387,6 +388,19 @@ QuickSearch::FindPattern(std::wstring const & pattern, bool backward)
 	return backward ? FindPatternBackward(pattern) : FindPatternForward(pattern);
 }
 
+class case_equivalent : public std::binary_function<wchar_t, wchar_t, bool>
+{
+public:
+	bool operator()(wchar_t lhs, wchar_t rhs) const
+	{
+		return CSTR_EQUAL == win32::check(CompareString(LOCALE_USER_DEFAULT,
+			NORM_IGNORECASE | NORM_IGNOREKANATYPE |
+			NORM_IGNORENONSPACE | NORM_IGNOREWIDTH,
+			&lhs, 1,
+			&rhs, 1));
+	}
+};
+
 QuickSearch::Found
 QuickSearch::FindPatternForward(std::wstring const & pattern)
 {
@@ -401,7 +415,8 @@ QuickSearch::FindPatternForward(std::wstring const & pattern)
 		wchar_t const * begin = egs.StringText + start;
 		wchar_t const * end = egs.StringText + egs.StringLength;
 		wchar_t const * found = std::search(begin, end,
-			pattern.begin(), pattern.end());
+			pattern.begin(), pattern.end(),
+			case_equivalent());
 		int foundPos = found == end ? -1 : found - begin;
 		int foundLength = pattern.size();
 
@@ -434,7 +449,8 @@ QuickSearch::FindPatternBackward(std::wstring const & pattern)
 			begin(egs.StringText + egs.StringLength - start),
 			end(egs.StringText),
 			found(std::search(begin, end,
-				pattern.rbegin(), pattern.rend()));
+				pattern.rbegin(), pattern.rend(),
+				case_equivalent()));
 		int foundPos = found == end ? -1 : end - found - pattern.size();
 		int foundLength = pattern.size();
 
