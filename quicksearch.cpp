@@ -280,6 +280,7 @@ QuickSearch::ProcessKey(KEY_EVENT_RECORD const & key)
 
 	if (key.wVirtualKeyCode == VK_BACK && shifts == 0)
 	{
+		if (patterns_[activePattern_].empty()) return true;
 		patterns_[activePattern_].resize(patterns_[activePattern_].size() - 1);
 		SearchAgain();
 		return true;
