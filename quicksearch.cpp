@@ -147,6 +147,7 @@ private:
 	void SaveInfo();
 	void RestorePos();
 	void RestoreBlock();
+	void RestoreAll();
 	void Unselect();
 
 	bool ProcessInput(INPUT_RECORD const & input);
@@ -209,6 +210,13 @@ void
 QuickSearch::RestoreBlock()
 {
 	Far.EditorControl(ECTL_SELECT, &saveBlock_);
+}
+
+void
+QuickSearch::RestoreAll()
+{
+	RestoreBlock();
+	RestorePos();
 }
 
 void
@@ -279,8 +287,7 @@ QuickSearch::ProcessKey(KEY_EVENT_RECORD const & key)
 
 	if (key.wVirtualKeyCode == VK_ESCAPE && shifts == 0)
 	{
-		RestoreBlock();
-		RestorePos();
+		RestoreAll();
 		Exit();
 		return true;
 	}
@@ -353,7 +360,7 @@ QuickSearch::SearchAgain()
 	found_[activePattern_] = FindPattern(patterns_[activePattern_], backward_ && activePattern_ == 0);
 	if (!found_[activePattern_])
 	{
-		RestorePos();
+		RestoreAll();
 		NotFound();
 		return;
 	}
