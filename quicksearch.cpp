@@ -134,6 +134,7 @@ private:
 
 	std::wstring patterns_[2];
 	size_t activePattern_;
+	Found found_[2];
 	Found FindPattern(std::wstring const & pattern, bool backward = false);
 	Found FindPatternForward(std::wstring const & pattern);
 	Found FindPatternBackward(std::wstring const & pattern);
@@ -290,9 +291,11 @@ QuickSearch::ProcessKey(KEY_EVENT_RECORD const & key)
 		return true;
 	}
 
-	if (key.wVirtualKeyCode == VK_TAB && (shifts &~ SHIFT_PRESSED) == 0)
+	if (key.wVirtualKeyCode == VK_TAB && shifts == 0)
 	{
-		activePattern_ ^= 1;
+		if (activePattern_ == 1) return true;
+		SaveInfo();
+		activePattern_ = 1;
 		ShowPattern();
 		return true;
 	}
@@ -347,37 +350,21 @@ QuickSearch::SearchAgain()
 	ShowPattern();
 	RestorePos();
 
-	Found foundStart = FindPattern(patterns_[0], backward_);
-	if (!foundStart)
+	found_[activePattern_] = FindPattern(patterns_[activePattern_], backward_ && activePattern_ == 0);
+	if (!found_[activePattern_])
 	{
 		RestorePos();
 		NotFound();
 		return;
 	}
-	EditorSelect esel = { BTYPE_STREAM, foundStart.line, foundStart.pos, foundStart.length, 1 };
+	EditorSelect esel = { BTYPE_STREAM, found_[0].line, found_[0].pos,
+		found_[activePattern_].pos + found_[activePattern_].length - found_[0].pos,
+		found_[activePattern_].line - found_[0].line + 1 };
 	Far.EditorControl(ECTL_SELECT, &esel);
 
-	EditorSetPosition esp = { foundStart.line, foundStart.pos + foundStart.length, -1, -1, -1, -1 };
+	EditorSetPosition esp = { found_[activePattern_].line,
+		found_[activePattern_].pos + found_[activePattern_].length, -1, -1, -1, -1 };
 	Far.EditorControl(ECTL_SETPOSITION, &esp);
-
-	if (!patterns_[1].empty())
-	{
-		Found foundEnd = FindPattern(patterns_[1]);
-		if (!foundEnd)
-		{
-			Far.EditorControl(ECTL_SETPOSITION, &esp);
-			NotFound();
-			return;
-		}
-
-		std::wostringstream oss;
-		esel.BlockWidth = foundEnd.pos + foundEnd.length - foundStart.pos;
-		esel.BlockHeight = foundEnd.line - foundStart.line + 1;
-		Far.EditorControl(ECTL_SELECT, &esel);
-
-		EditorSetPosition esp = { foundEnd.line, foundEnd.pos + foundEnd.length, -1, -1, -1, -1 };
-		Far.EditorControl(ECTL_SETPOSITION, &esp);
-	}
 
 	Far.EditorControl(ECTL_REDRAW, 0);
 }
