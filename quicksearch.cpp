@@ -171,7 +171,7 @@ QuickSearch::SaveInfo()
 
 	saveBlock_.BlockStartLine = saveInfo_.BlockStartLine;
 
-	EditorSetPosition esp = { saveInfo_.BlockStartLine, -1, 0, -1, -1, -1 };
+	EditorSetPosition esp = { saveInfo_.BlockStartLine, 0, -1, -1, -1, -1 };
 	Far.EditorControl(ECTL_SETPOSITION, &esp);
 
 	EditorGetString egs = { -1 };
@@ -180,7 +180,7 @@ QuickSearch::SaveInfo()
 
 	while (egs.SelEnd == -1)
 	{
-		EditorSetPosition esp = { egs.StringNumber + 1, -1, 0, -1, -1, -1 };
+		EditorSetPosition esp = { egs.StringNumber + 1, 0, -1, -1, -1, -1 };
 		if (!Far.EditorControl(ECTL_SETPOSITION, &esp)) break;
 
 		Far.EditorControl(ECTL_GETSTRING, &egs);
@@ -193,7 +193,7 @@ QuickSearch::SaveInfo()
 void
 QuickSearch::RestorePos()
 {
-	EditorSetPosition esp = { saveInfo_.CurLine, -1, saveInfo_.CurTabPos, saveInfo_.TopScreenLine, saveInfo_.LeftPos, -1 };
+	EditorSetPosition esp = { saveInfo_.CurLine, saveInfo_.CurPos, -1, saveInfo_.TopScreenLine, saveInfo_.LeftPos, -1 };
 	Far.EditorControl(ECTL_SETPOSITION, &esp);
 }
 
@@ -321,7 +321,7 @@ QuickSearch::SearchAgain()
 	EditorSelect esel = { BTYPE_STREAM, foundStart.line, foundStart.pos, foundStart.length, 1 };
 	Far.EditorControl(ECTL_SELECT, &esel);
 
-	EditorSetPosition esp = { foundStart.line, -1, foundStart.pos + foundStart.length, -1, -1, -1 };
+	EditorSetPosition esp = { foundStart.line, foundStart.pos + foundStart.length, -1, -1, -1, -1 };
 	Far.EditorControl(ECTL_SETPOSITION, &esp);
 
 	if (!patterns_[1].empty())
@@ -339,7 +339,7 @@ QuickSearch::SearchAgain()
 		esel.BlockHeight = foundEnd.line - foundStart.line + 1;
 		Far.EditorControl(ECTL_SELECT, &esel);
 
-		EditorSetPosition esp = { foundEnd.line, -1, foundEnd.pos + foundEnd.length, -1, -1, -1 };
+		EditorSetPosition esp = { foundEnd.line, foundEnd.pos + foundEnd.length, -1, -1, -1, -1 };
 		Far.EditorControl(ECTL_SETPOSITION, &esp);
 	}
 
@@ -352,7 +352,7 @@ QuickSearch::FindPattern(std::wstring const & pattern)
 	EditorInfo einfo;
 	Far.EditorControl(ECTL_GETINFO, &einfo);
 
-	for (int start = einfo.CurTabPos;; start = 0)
+	for (int start = einfo.CurPos;; start = 0)
 	{
 		EditorGetString egs = { -1 };
 		Far.EditorControl(ECTL_GETSTRING, &egs);
