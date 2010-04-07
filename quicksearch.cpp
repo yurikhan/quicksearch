@@ -103,14 +103,37 @@ DoMainMenu()
 class QuickSearch
 {
 private:
+	struct Found
+	{
+		typedef bool (Found::* unspecified_bool)() const;
+
+		int line;
+		int pos;
+		int length;
+	public:
+		Found() : line(-1), pos(-1), length(-1) {}
+		Found(int line, int pos, int length) : line(line), pos(pos), length(length) {}
+		operator unspecified_bool() const
+		{
+			if (!*this) return 0;
+			return &Found::operator!;
+		}
+		bool operator!() const
+		{
+			return line == -1;
+		}
+	};
+
 	HANDLE hConIn_;
 
 	bool running_;
 	void Exit() { running_ = false; }
 
-	std::wstring pattern_;
+	std::wstring patterns_[2];
+	size_t activePattern_;
+	Found FindPattern(std::wstring const & pattern);
 	void SearchAgain();
-	void ShowPattern();
+	void ShowPattern(wchar_t const * message = 0);
 	void NotFound();
 
 	EditorInfo saveInfo_;
@@ -132,7 +155,7 @@ public:
 };
 
 QuickSearch::QuickSearch()
-	: hConIn_(win32::check_handle(GetStdHandle(STD_INPUT_HANDLE)))
+	: hConIn_(win32::check_handle(GetStdHandle(STD_INPUT_HANDLE))), activePattern_(0)
 {
 	SaveInfo();
 	
@@ -224,25 +247,27 @@ QuickSearch::ProcessKey(KEY_EVENT_RECORD const & key)
 {
 	if (!key.bKeyDown) return true;
 
-	if (IsCharKey(key))
-	{
-		pattern_ += key.uChar.UnicodeChar;
-		SearchAgain();
-		return true;
-	}
-
 	static DWORD const SHIFT_MASK = SHIFT_PRESSED
 		| LEFT_CTRL_PRESSED | RIGHT_CTRL_PRESSED
 		| LEFT_ALT_PRESSED  | RIGHT_ALT_PRESSED;
 
-	if (key.wVirtualKeyCode == VK_BACK && (key.dwControlKeyState & SHIFT_MASK) == 0)
+	DWORD const shifts = key.dwControlKeyState & SHIFT_MASK;
+
+	if (IsCharKey(key))
 	{
-		pattern_.resize(pattern_.size() - 1);
+		patterns_[activePattern_] += key.uChar.UnicodeChar;
 		SearchAgain();
 		return true;
 	}
 
-	if (key.wVirtualKeyCode == VK_ESCAPE && (key.dwControlKeyState & SHIFT_MASK) == 0)
+	if (key.wVirtualKeyCode == VK_BACK && shifts == 0)
+	{
+		patterns_[activePattern_].resize(patterns_[activePattern_].size() - 1);
+		SearchAgain();
+		return true;
+	}
+
+	if (key.wVirtualKeyCode == VK_ESCAPE && shifts == 0)
 	{
 		RestoreBlock();
 		RestorePos();
@@ -250,9 +275,16 @@ QuickSearch::ProcessKey(KEY_EVENT_RECORD const & key)
 		return true;
 	}
 
-	if (key.wVirtualKeyCode == VK_RETURN && (key.dwControlKeyState & SHIFT_MASK) == 0)
+	if (key.wVirtualKeyCode == VK_RETURN && shifts == 0)
 	{
 		Exit();
+		return true;
+	}
+
+	if (key.wVirtualKeyCode == VK_TAB && (shifts &~ SHIFT_PRESSED) == 0)
+	{
+		activePattern_ ^= 1;
+		ShowPattern();
 		return true;
 	}
 
@@ -279,62 +311,85 @@ QuickSearch::SearchAgain()
 	ShowPattern();
 	RestorePos();
 
-	for (int start = saveInfo_.CurTabPos;; start = 0)
+	Found foundStart = FindPattern(patterns_[0]);
+	if (!foundStart)
+	{
+		RestorePos();
+		NotFound();
+		return;
+	}
+	EditorSelect esel = { BTYPE_STREAM, foundStart.line, foundStart.pos, foundStart.length, 1 };
+	Far.EditorControl(ECTL_SELECT, &esel);
+
+	EditorSetPosition esp = { foundStart.line, -1, foundStart.pos + foundStart.length, -1, -1, -1 };
+	Far.EditorControl(ECTL_SETPOSITION, &esp);
+
+	if (!patterns_[1].empty())
+	{
+		Found foundEnd = FindPattern(patterns_[1]);
+		if (!foundEnd)
+		{
+			Far.EditorControl(ECTL_SETPOSITION, &esp);
+			NotFound();
+			return;
+		}
+
+		std::wostringstream oss;
+		esel.BlockWidth = foundEnd.pos + foundEnd.length - foundStart.pos;
+		esel.BlockHeight = foundEnd.line - foundStart.line + 1;
+		Far.EditorControl(ECTL_SELECT, &esel);
+
+		EditorSetPosition esp = { foundEnd.line, -1, foundEnd.pos + foundEnd.length, -1, -1, -1 };
+		Far.EditorControl(ECTL_SETPOSITION, &esp);
+	}
+
+	Far.EditorControl(ECTL_REDRAW, 0);
+}
+
+QuickSearch::Found
+QuickSearch::FindPattern(std::wstring const & pattern)
+{
+	EditorInfo einfo;
+	Far.EditorControl(ECTL_GETINFO, &einfo);
+
+	for (int start = einfo.CurTabPos;; start = 0)
 	{
 		EditorGetString egs = { -1 };
 		Far.EditorControl(ECTL_GETSTRING, &egs);
 
-
-#if 0
-		// Vista and above :(
-		int foundLength = 0, foundPos = FindNLSStringEx(LOCALE_NAME_USER_DEFAULT, FIND_FROMSTART
-			| NORM_IGNORECASE
-			| NORM_IGNOREKANATYPE
-			| NORM_IGNORENONSPACE
-			| NORM_IGNOREWIDTH
-			| NORM_LINGUISTIC_CASING,
-			egs.StringText + start,
-			egs.StringLength - start,
-			pattern_.c_str(),
-			pattern_.size(),
-			&foundLength,
-			0, 0, 0);
-#else
 		wchar_t const * begin = egs.StringText + start;
 		wchar_t const * end = egs.StringText + egs.StringLength;
 		wchar_t const * found = std::search(begin, end,
-			pattern_.begin(), pattern_.end());
+			pattern.begin(), pattern.end());
 		int foundPos = found == end ? -1 : found - begin;
-		int foundLength = pattern_.size();
-#endif
+		int foundLength = pattern.size();
 
 		if (foundPos >= 0)
 		{
-			EditorSelect esel = { BTYPE_STREAM, -1, start + foundPos, foundLength, 1 };
-			Far.EditorControl(ECTL_SELECT, &esel);
-
-			EditorSetPosition esp = { -1, -1, start + foundPos + foundLength, -1, -1, -1 };
-			Far.EditorControl(ECTL_SETPOSITION, &esp);
-
-			Far.EditorControl(ECTL_REDRAW, 0);
-			return;
+			return Found(einfo.CurLine, start + foundPos, foundLength);
 		}
 	
-		EditorSetPosition esp = { egs.StringNumber + 1, -1, -1, -1, -1, -1 };
-		if (!Far.EditorControl(ECTL_SETPOSITION, &esp))
-		{
-			RestorePos();
-			NotFound();
-			return;
-		}
+	    ++einfo.CurLine;
+	    if (einfo.CurLine >= einfo.TotalLines)
+	    {
+			return Found();
+	    }
+		EditorSetPosition esp = { einfo.CurLine, -1, -1, -1, -1, -1 };
+		Far.EditorControl(ECTL_SETPOSITION, &esp);
 	}
 }
 
 void
-QuickSearch::ShowPattern()
+QuickSearch::ShowPattern(wchar_t const * message /*= 0*/)
 {
 	std::wostringstream oss;
-	oss << L"/" << pattern_;
+	oss << L"/" << patterns_[0];
+	if (!patterns_[1].empty() || activePattern_ == 1)
+	{
+		if (activePattern_ == 0) oss << L"_";
+		oss << wchar_t(0x2026) << patterns_[1];
+	}
+	if (message) oss << message;
 	Far.EditorControl(ECTL_SETTITLE, const_cast<wchar_t*>(oss.str().c_str()));
 	Far.EditorControl(ECTL_REDRAW, 0);
 }
@@ -342,10 +397,7 @@ QuickSearch::ShowPattern()
 void
 QuickSearch::NotFound()
 {
-	std::wostringstream oss;
-	oss << L"/" << pattern_ << GetMsg(Msg::NotFound);
-	Far.EditorControl(ECTL_SETTITLE, const_cast<wchar_t*>(oss.str().c_str()));
-	Far.EditorControl(ECTL_REDRAW, 0);
+	ShowPattern(GetMsg(Msg::NotFound));
 }
 
 void
