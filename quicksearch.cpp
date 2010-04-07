@@ -176,30 +176,44 @@ QuickSearch::SaveInfo()
 {
 	Far.EditorControl(ECTL_GETINFO, &saveInfo_);
 	saveBlock_.BlockType = saveInfo_.BlockType;
-	if (saveBlock_.BlockType == BTYPE_NONE) return;
 
-	saveBlock_.BlockStartLine = saveInfo_.BlockStartLine;
-
-	EditorSetPosition esp = { saveInfo_.BlockStartLine, -1, -1, -1, -1, -1 };
-	Far.EditorControl(ECTL_SETPOSITION, &esp);
-
-	EditorGetString egs = { -1 };
-	Far.EditorControl(ECTL_GETSTRING, &egs);
-	saveBlock_.BlockStartPos = egs.SelStart;
-
-	int line = saveInfo_.CurLine;
-	while (egs.SelEnd == -1)
+	if (saveBlock_.BlockType != BTYPE_NONE)
 	{
-		if (++line >= saveInfo_.TotalLines) break;
+		saveBlock_.BlockStartLine = saveInfo_.BlockStartLine;
 
-		EditorSetPosition esp = { line, -1, -1, -1, -1, -1 };
+		EditorSetPosition esp = { saveInfo_.BlockStartLine, -1, -1, -1, -1, -1 };
 		Far.EditorControl(ECTL_SETPOSITION, &esp);
 
+		EditorGetString egs = { -1 };
 		Far.EditorControl(ECTL_GETSTRING, &egs);
+		saveBlock_.BlockStartPos = egs.SelStart;
+
+		int line = saveInfo_.CurLine;
+		while (egs.SelEnd == -1)
+		{
+			if (++line >= saveInfo_.TotalLines) break;
+
+			EditorSetPosition esp = { line, -1, -1, -1, -1, -1 };
+			Far.EditorControl(ECTL_SETPOSITION, &esp);
+
+			Far.EditorControl(ECTL_GETSTRING, &egs);
+		}
+
+		saveBlock_.BlockHeight = line - saveInfo_.BlockStartLine + 1;
+		saveBlock_.BlockWidth = egs.SelEnd - saveBlock_.BlockStartPos;
 	}
 
-	saveBlock_.BlockHeight = line - saveInfo_.BlockStartLine + 1;
-	saveBlock_.BlockWidth = egs.SelEnd - saveBlock_.BlockStartPos;
+	if (!found_[0])
+	{
+		if (saveBlock_.BlockType == BTYPE_STREAM)
+		{
+			found_[0] = Found(saveBlock_.BlockStartLine, saveBlock_.BlockStartPos, 0);
+		}
+		else
+		{
+			found_[0] = Found(saveInfo_.CurLine, saveInfo_.CurPos, 0);
+		}
+	}
 }
 
 void
