@@ -180,22 +180,25 @@ QuickSearch::SaveInfo()
 
 	saveBlock_.BlockStartLine = saveInfo_.BlockStartLine;
 
-	EditorSetPosition esp = { saveInfo_.BlockStartLine, 0, -1, -1, -1, -1 };
+	EditorSetPosition esp = { saveInfo_.BlockStartLine, -1, -1, -1, -1, -1 };
 	Far.EditorControl(ECTL_SETPOSITION, &esp);
 
 	EditorGetString egs = { -1 };
 	Far.EditorControl(ECTL_GETSTRING, &egs);
 	saveBlock_.BlockStartPos = egs.SelStart;
 
+	int line = saveInfo_.CurLine;
 	while (egs.SelEnd == -1)
 	{
-		EditorSetPosition esp = { egs.StringNumber + 1, 0, -1, -1, -1, -1 };
-		if (!Far.EditorControl(ECTL_SETPOSITION, &esp)) break;
+		if (++line >= saveInfo_.TotalLines) break;
+
+		EditorSetPosition esp = { line, -1, -1, -1, -1, -1 };
+		Far.EditorControl(ECTL_SETPOSITION, &esp);
 
 		Far.EditorControl(ECTL_GETSTRING, &egs);
 	}
 
-	saveBlock_.BlockHeight = egs.StringNumber - saveInfo_.BlockStartLine + 1;
+	saveBlock_.BlockHeight = line - saveInfo_.BlockStartLine + 1;
 	saveBlock_.BlockWidth = egs.SelEnd - saveBlock_.BlockStartPos;
 }
 
