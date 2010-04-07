@@ -1,0 +1,34 @@
+﻿.Language=English,English
+.Options CtrlColorChar=\
+.Options CtrlStartPosChar=^<wrap>
+
+@Contents
+$ #QuickSearch#
+  This plugin implements incremental search in FAR Manager internal editor.
+
+  #Operation:#
+
+  • Start the plugin from the Plugins menu or by a key macro.
+    ► The status line text changes to a #/#.
+  • Enter some characters.
+    ► The nearest occurence of the entered pattern is found and selected.
+    ► The status line displays the pattern.
+
+  #Keys:#
+
+  #Esc#    Cancel search and restore original position and block selection.
+
+  #Enter#  Exit search, leaving the current selection.
+
+  #Tab#    ^<wrap>Remember the current position and search for another pattern.
+The whole text between the first and second patterns will be selected.
+
+  ~License~@License@
+
+  Written by Yuri Khan <yurivkhan@@gmail.com>
+  Home page: ~http://yurivkhan.github.com/quicksearch/~@http://yurivkhan.github.com/quicksearch/@
+
+@License
+$ #License#
+  QuickSearch is licensed under GNU General Public License version 3.
+For the full license text, see the COPYING file in plugin directory.

@@ -84,7 +84,7 @@ DoMainMenu()
 		items[0].Text = GetMsg(Msg::SearchForward);
 		items[1].Text = GetMsg(Msg::SearchBackward);
 
-		switch (Far.Menu(Far.ModuleNumber, -1, -1, 0, FMENU_USEEXT | FMENU_WRAPMODE, 0, 0, 0, 0, 0,
+		switch (Far.Menu(Far.ModuleNumber, -1, -1, 0, FMENU_USEEXT | FMENU_WRAPMODE, 0, 0, L"Contents", 0, 0,
 			reinterpret_cast<FarMenuItem const *>(items), 2))
 		{
 		case -1: return;
@@ -321,6 +321,16 @@ QuickSearch::ProcessKey(KEY_EVENT_RECORD const & key)
 		if (activePattern_ == 1) return true;
 		SaveInfo();
 		activePattern_ = 1;
+		ShowPattern();
+		return true;
+	}
+
+	if (key.wVirtualKeyCode == VK_F1 && shifts == 0)
+	{
+		INPUT_RECORD input;
+		DWORD eventsRead;
+		ReadConsoleInput(hConIn_, &input, 1, &eventsRead);
+		Far.ShowHelp(Far.ModuleName, 0, FHELP_SELFHELP);
 		ShowPattern();
 		return true;
 	}
