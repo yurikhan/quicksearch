@@ -79,10 +79,10 @@ DoMainMenu()
 	try
 	{
 		FarMenuItemEx items[2] = { 0 };
-	
+
 		items[0].Text = GetMsg(Msg::SearchForward);
 		items[1].Text = GetMsg(Msg::SearchBackward);
-	
+
 		switch (Far.Menu(Far.ModuleNumber, -1, -1, 0, FMENU_USEEXT | FMENU_WRAPMODE, 0, 0, 0, 0, 0,
 			reinterpret_cast<FarMenuItem const *>(items), 2))
 		{
@@ -218,10 +218,10 @@ QuickSearch::Run()
 	while (running_)
 	{
 		win32::check(WaitForSingleObject(hConIn_, INFINITE), WAIT_FAILED);
-	
+
 		INPUT_RECORD input; DWORD eventsRead;
 		win32::check(PeekConsoleInput(hConIn_, &input, 1, &eventsRead));
-		
+
 		if (!ProcessInput(input)) return;
 
 		ReadConsoleInput(hConIn_, &input, 1, &eventsRead);
@@ -368,7 +368,7 @@ QuickSearch::FindPattern(std::wstring const & pattern)
 		{
 			return Found(einfo.CurLine, start + foundPos, foundLength);
 		}
-	
+
 	    ++einfo.CurLine;
 	    if (einfo.CurLine >= einfo.TotalLines)
 	    {
