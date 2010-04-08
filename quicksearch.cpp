@@ -452,7 +452,7 @@ QuickSearch::FindNext(bool backward, int startPos)
 	save.SaveInfo();
 
 	Found next = FindPattern(patterns_[activePattern_], startPos, backward);
-	if (!next)
+	if (!next || activePattern_ == 1 && next < found_[0])
 	{
 		save.RestoreAll();
 		NotFound();
