@@ -1,17 +1,12 @@
-#include <windows.h>
-
 1	VERSIONINFO
 	FILEVERSION 0,0,1,1
 	PRODUCTVERSION 0,0,1,1
-	FILEFLAGSMASK VS_FFI_FILEFLAGSMASK
-	FILEFLAGS 0
-	FILEOS VOS_NT_WINDOWS32
-	FILETYPE VFT_DLL
-	FILESUBTYPE 0
-BEGIN
+	FILEOS 4
+	FILETYPE 2
+{
 	BLOCK "StringFileInfo"
 	{
-		BLOCK "0x040904B0"
+		BLOCK "000004B0"
 		{
 			VALUE "CompanyName", "Yuri Khan"
 			VALUE "FileDescription", "QuickSearch FAR plugin (Unicode)"
@@ -24,6 +19,6 @@ BEGIN
 	}
 	BLOCK "VarFileInfo"
 	{
-		VALUE "Translation", 0x0409, 1200
+		VALUE "Translation", 0x0000, 1200
 	}
-END
+}
