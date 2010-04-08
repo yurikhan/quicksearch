@@ -117,29 +117,47 @@ public:
 	int CurPos() const { return saveInfo_.CurPos; }
 };
 
+struct Found
+{
+	typedef bool (Found::* unspecified_bool)() const;
+
+	int line;
+	int pos;
+	int length;
+public:
+	Found() : line(-1), pos(-1), length(-1) {}
+	Found(int line, int pos, int length) : line(line), pos(pos), length(length) {}
+	operator unspecified_bool() const
+	{
+		if (!*this) return 0;
+		return &Found::operator!;
+	}
+	bool operator!() const
+	{
+		return line == -1;
+	}
+};
+
+bool operator<(Found const & lhs, Found const & rhs)
+{
+	return 	lhs.line   < rhs.line   || lhs.line == rhs.line
+		&&(	lhs.pos    < rhs.pos    || lhs.pos  == rhs.pos
+		&&(	lhs.length < rhs.length ));
+}
+bool operator==(Found const & lhs, Found const & rhs)
+{
+	return lhs.line   == rhs.line
+		&& lhs.pos    == rhs.pos
+		&& lhs.length == rhs.length;
+}
+using std::operator>;
+using std::operator<=;
+using std::operator>=;
+using std::operator!=;
+
 class QuickSearch
 {
 private:
-	struct Found
-	{
-		typedef bool (Found::* unspecified_bool)() const;
-
-		int line;
-		int pos;
-		int length;
-	public:
-		Found() : line(-1), pos(-1), length(-1) {}
-		Found(int line, int pos, int length) : line(line), pos(pos), length(length) {}
-		operator unspecified_bool() const
-		{
-			if (!*this) return 0;
-			return &Found::operator!;
-		}
-		bool operator!() const
-		{
-			return line == -1;
-		}
-	};
 
 	bool backward_;
 
@@ -453,7 +471,7 @@ QuickSearch::FindNext(bool backward, int startPos)
 	Far.EditorControl(ECTL_REDRAW, 0);
 }
 
-QuickSearch::Found
+Found
 QuickSearch::FindPattern(std::wstring const & pattern, int startPos, bool backward)
 {
 	return backward ? FindPatternBackward(pattern, startPos) : FindPatternForward(pattern, startPos);
@@ -472,7 +490,7 @@ public:
 	}
 };
 
-QuickSearch::Found
+Found
 QuickSearch::FindPatternForward(std::wstring const & pattern, int startPos)
 {
 	EditorInfo einfo;
@@ -505,7 +523,7 @@ QuickSearch::FindPatternForward(std::wstring const & pattern, int startPos)
 		Far.EditorControl(ECTL_SETPOSITION, &esp);
 	}
 }
-QuickSearch::Found
+Found
 QuickSearch::FindPatternBackward(std::wstring const & pattern, int startPos)
 {
 	EditorInfo einfo;
