@@ -101,6 +101,22 @@ DoMainMenu()
 	}
 }
 
+class SaveBlockAndPos
+{
+private:
+	EditorInfo saveInfo_;
+	EditorSelect saveBlock_;
+public:
+	void SaveInfo();
+	void RestoreBlock();
+	void RestorePos();
+	void RestoreAll();
+
+	int StartLine() const;
+	int StartPos() const;
+	int CurPos() const { return saveInfo_.CurPos; }
+};
+
 class QuickSearch
 {
 private:
@@ -135,19 +151,19 @@ private:
 	std::wstring patterns_[2];
 	size_t activePattern_;
 	Found found_[2];
-	Found FindPattern(std::wstring const & pattern, bool backward = false);
-	Found FindPatternForward(std::wstring const & pattern);
-	Found FindPatternBackward(std::wstring const & pattern);
+	Found FindPattern(std::wstring const & pattern, int startPos, bool backward = false);
+	Found FindPatternForward(std::wstring const & pattern, int startPos);
+	Found FindPatternBackward(std::wstring const & pattern, int startPos);
 	void SearchAgain();
+	void FindNext(bool backward, int startPos);
 	void ShowPattern(wchar_t const * message = 0);
 	void NotFound();
 
-	EditorInfo saveInfo_;
-	EditorSelect saveBlock_;
+	SaveBlockAndPos save_;
 	void SaveInfo();
-	void RestorePos();
-	void RestoreBlock();
-	void RestoreAll();
+	void RestorePos() { save_.RestorePos(); }
+	void RestoreBlock() { save_.RestoreBlock(); }
+	void RestoreAll() { save_.RestoreAll(); }
 	void Unselect();
 
 	bool ProcessInput(INPUT_RECORD const & input);
@@ -171,8 +187,20 @@ QuickSearch::QuickSearch(bool backward)
 	Unselect();
 }
 
+int
+SaveBlockAndPos::StartLine() const
+{
+	return saveBlock_.BlockType == BTYPE_NONE ? saveInfo_.CurLine : saveBlock_.BlockStartLine;
+}
+
+int
+SaveBlockAndPos::StartPos() const
+{
+	return saveBlock_.BlockType == BTYPE_NONE ? saveInfo_.CurPos : saveBlock_.BlockStartPos;
+}
+
 void
-QuickSearch::SaveInfo()
+SaveBlockAndPos::SaveInfo()
 {
 	Far.EditorControl(ECTL_GETINFO, &saveInfo_);
 	saveBlock_.BlockType = saveInfo_.BlockType;
@@ -201,36 +229,37 @@ QuickSearch::SaveInfo()
 
 		saveBlock_.BlockHeight = line - saveInfo_.BlockStartLine + 1;
 		saveBlock_.BlockWidth = egs.SelEnd - saveBlock_.BlockStartPos;
-	}
 
-	if (!found_[0])
-	{
-		if (saveBlock_.BlockType == BTYPE_STREAM)
-		{
-			found_[0] = Found(saveBlock_.BlockStartLine, saveBlock_.BlockStartPos, 0);
-		}
-		else
-		{
-			found_[0] = Found(saveInfo_.CurLine, saveInfo_.CurPos, 0);
-		}
+		RestorePos();
 	}
 }
 
 void
-QuickSearch::RestorePos()
+QuickSearch::SaveInfo()
+{
+	save_.SaveInfo();
+
+	if (!found_[0])
+	{
+		found_[0] = Found(save_.StartLine(), save_.StartPos(), 0);
+	}
+}
+
+void
+SaveBlockAndPos::RestorePos()
 {
 	EditorSetPosition esp = { saveInfo_.CurLine, saveInfo_.CurPos, -1, saveInfo_.TopScreenLine, saveInfo_.LeftPos, -1 };
 	Far.EditorControl(ECTL_SETPOSITION, &esp);
 }
 
 void
-QuickSearch::RestoreBlock()
+SaveBlockAndPos::RestoreBlock()
 {
 	Far.EditorControl(ECTL_SELECT, &saveBlock_);
 }
 
 void
-QuickSearch::RestoreAll()
+SaveBlockAndPos::RestoreAll()
 {
 	RestoreBlock();
 	RestorePos();
@@ -335,6 +364,17 @@ QuickSearch::ProcessKey(KEY_EVENT_RECORD const & key)
 		return true;
 	}
 
+	if (key.wVirtualKeyCode == VK_F3 && shifts == 0)
+	{
+		FindNext(false, found_[activePattern_].pos + found_[activePattern_].length);
+		return true;
+	}
+	if (key.wVirtualKeyCode == VK_F3 && shifts == SHIFT_PRESSED)
+	{
+		FindNext(true, found_[activePattern_].pos);
+		return true;
+	}
+
 	return false;
 }
 
@@ -384,14 +424,23 @@ QuickSearch::SearchAgain()
 {
 	ShowPattern();
 	RestorePos();
+	FindNext(backward_ && activePattern_ == 0, save_.CurPos());
+}
 
-	found_[activePattern_] = FindPattern(patterns_[activePattern_], backward_ && activePattern_ == 0);
-	if (!found_[activePattern_])
+void
+QuickSearch::FindNext(bool backward, int startPos)
+{
+	SaveBlockAndPos save;
+	save.SaveInfo();
+
+	Found next = FindPattern(patterns_[activePattern_], startPos, backward);
+	if (!next)
 	{
-		RestoreAll();
+		save.RestoreAll();
 		NotFound();
 		return;
 	}
+	found_[activePattern_] = next;
 	EditorSelect esel = { BTYPE_STREAM, found_[0].line, found_[0].pos,
 		found_[activePattern_].pos + found_[activePattern_].length - found_[0].pos,
 		found_[activePattern_].line - found_[0].line + 1 };
@@ -405,9 +454,9 @@ QuickSearch::SearchAgain()
 }
 
 QuickSearch::Found
-QuickSearch::FindPattern(std::wstring const & pattern, bool backward)
+QuickSearch::FindPattern(std::wstring const & pattern, int startPos, bool backward)
 {
-	return backward ? FindPatternBackward(pattern) : FindPatternForward(pattern);
+	return backward ? FindPatternBackward(pattern, startPos) : FindPatternForward(pattern, startPos);
 }
 
 class case_equivalent : public std::binary_function<wchar_t, wchar_t, bool>
@@ -424,12 +473,12 @@ public:
 };
 
 QuickSearch::Found
-QuickSearch::FindPatternForward(std::wstring const & pattern)
+QuickSearch::FindPatternForward(std::wstring const & pattern, int startPos)
 {
 	EditorInfo einfo;
 	Far.EditorControl(ECTL_GETINFO, &einfo);
 
-	for (int start = einfo.CurPos;; start = 0)
+	for (int start = startPos;; start = 0)
 	{
 		EditorGetString egs = { -1 };
 		Far.EditorControl(ECTL_GETSTRING, &egs);
@@ -457,7 +506,7 @@ QuickSearch::FindPatternForward(std::wstring const & pattern)
 	}
 }
 QuickSearch::Found
-QuickSearch::FindPatternBackward(std::wstring const & pattern)
+QuickSearch::FindPatternBackward(std::wstring const & pattern, int startPos)
 {
 	EditorInfo einfo;
 	Far.EditorControl(ECTL_GETINFO, &einfo);
@@ -465,7 +514,7 @@ QuickSearch::FindPatternBackward(std::wstring const & pattern)
 	EditorGetString egs = { -1 };
 	Far.EditorControl(ECTL_GETSTRING, &egs);
 
-	for (int start = egs.StringLength - einfo.CurPos;; start = 0)
+	for (int start = egs.StringLength - startPos;; start = 0)
 	{
 		std::reverse_iterator<wchar_t const *>
 			begin(egs.StringText + egs.StringLength - start),

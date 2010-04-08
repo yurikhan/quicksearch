@@ -16,12 +16,16 @@ $ #QuickSearch# v0.0.1
 
   #Keys:#
 
-  #Esc#    Cancel search and restore original position and block selection.
+  #Esc#       Cancel search and restore original position and block selection.
 
-  #Enter#  Exit search, leaving the current selection.
+  #Enter#     Exit search, leaving the current selection.
 
-  #Tab#    ^<wrap>Remember the current position and search for another pattern.
+  #Tab#       ^<wrap>Remember the current position and search for another pattern.
 The whole text between the first and second patterns will be selected.
+
+  #F3#        Find next occurence.
+
+  #Shift-F3#  Find previous occurence.
 
   ~License~@License@
 
