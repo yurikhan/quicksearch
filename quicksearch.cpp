@@ -365,9 +365,18 @@ QuickSearch::ProcessKey(KEY_EVENT_RECORD const & key)
 
 	if (key.wVirtualKeyCode == VK_TAB && shifts == 0)
 	{
-		if (activePattern_ == 1) return true;
-		SaveInfo();
-		activePattern_ = 1;
+		switch (activePattern_)
+		{
+		case 0:
+			SaveInfo();
+			activePattern_ = 1;
+			break;
+		case 1:
+			RestoreAll();
+			patterns_[1].clear();
+			activePattern_ = 0;
+			break;
+		}
 		ShowPattern();
 		return true;
 	}
