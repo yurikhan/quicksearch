@@ -1,16 +1,30 @@
-all: quicksearch.dll
+CL_OPTIONS=/Ox /EHsc /DUNICODE /I..\\common\\unicode /Zc:forScope,wchar_t /c /nologo /W3
+CL=cl.exe $(CL_OPTIONS)
+
+LINK_OPTIONS=/DLL /NOLOGO /RELEASE /SUBSYSTEM:CONSOLE
+LINK=link.exe $(LINK_OPTIONS)
+
+RC=rc.exe
+
+all: quicksearch.dll quicksearch64.dll
 
 clean:
-	-del quicksearch.dll *.obj *.res *.pdb *.lib *.exp
+	-del *.dll *.obj *.res *.pdb *.lib *.exp
 
 dist:
-	7z a quicksearch.zip quicksearch.dll COPYING quicksearch.hlf quicksearch.lng README
+	7z a quicksearch.zip quicksearch.dll quicksearch64.dll COPYING quicksearch.hlf quicksearch.lng README
 
 quicksearch.dll: quicksearch.obj quicksearch.def quicksearch.res
-	link /DEF:quicksearch.def /DLL /MACHINE:X86 /NOLOGO /OUT:quicksearch.dll /PDB:quicksearch.pdb /RELEASE /SUBSYSTEM:CONSOLE quicksearch.obj quicksearch.res user32.lib
+	x86 $(LINK) /MACHINE:X86 /OUT:quicksearch.dll /PDB:quicksearch.pdb quicksearch.obj /DEF:quicksearch.def quicksearch.res user32.lib
+
+quicksearch64.dll: quicksearch64.obj quicksearch.def quicksearch.res
+	x86_amd64 $(LINK) /MACHINE:X64 /OUT:quicksearch64.dll /PDB:quicksearch64.pdb quicksearch64.obj /DEF:quicksearch.def quicksearch.res user32.lib
 
 quicksearch.obj: quicksearch.cpp
-	cl /Ox /EHsc /DUNICODE /I..\\common\\unicode /Zc:forScope,wchar_t /c /nologo /W3 quicksearch.cpp
+	x86 $(CL) /Foquicksearch.obj quicksearch.cpp
+
+quicksearch64.obj: quicksearch.cpp
+	x86_amd64 $(CL) /Foquicksearch64.obj quicksearch.cpp
 
 quicksearch.res: quicksearch.rc
-	rc quicksearch.rc
+	$(RC) quicksearch.rc

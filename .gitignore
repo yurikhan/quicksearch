@@ -1,5 +1,6 @@
 quicksearch.RES
-quicksearch.dll
-quicksearch.exp
-quicksearch.lib
-quicksearch.obj
+*.dll
+*.exp
+*.lib
+*.obj
+*.zip
