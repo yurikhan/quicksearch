@@ -515,8 +515,8 @@ QuickSearch::FindPatternForward(std::wstring const & pattern, int startPos)
 		wchar_t const * found = std::search(begin, end,
 			pattern.begin(), pattern.end(),
 			case_equivalent());
-		int foundPos = found == end ? -1 : found - begin;
-		int foundLength = pattern.size();
+		int foundPos = found == end ? -1 : static_cast<int>(found - begin);
+		int foundLength = static_cast<int>(pattern.size());
 
 		if (foundPos >= 0)
 		{
@@ -549,8 +549,8 @@ QuickSearch::FindPatternBackward(std::wstring const & pattern, int startPos)
 			found(std::search(begin, end,
 				pattern.rbegin(), pattern.rend(),
 				case_equivalent()));
-		int foundPos = found == end ? -1 : end - found - pattern.size();
-		int foundLength = pattern.size();
+		int foundPos = found == end ? -1 : static_cast<int>(end - found - pattern.size());
+		int foundLength = static_cast<int>(pattern.size());
 
 		if (foundPos >= 0)
 		{
