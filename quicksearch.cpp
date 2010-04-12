@@ -115,6 +115,8 @@ public:
 	int StartLine() const;
 	int StartPos() const;
 	int CurPos() const { return saveInfo_.CurPos; }
+
+	int BlockType() const { return saveInfo_.BlockType; }
 };
 
 struct Found
@@ -466,7 +468,8 @@ QuickSearch::FindNext(bool backward, int startPos)
 		return;
 	}
 	found_[activePattern_] = next;
-	EditorSelect esel = { BTYPE_STREAM, found_[0].line, found_[0].pos,
+	EditorSelect esel = { save_.BlockType() == BTYPE_NONE ? BTYPE_STREAM : save_.BlockType(),
+		found_[0].line, found_[0].pos,
 		found_[activePattern_].pos + found_[activePattern_].length - found_[0].pos,
 		found_[activePattern_].line - found_[0].line + 1 };
 	Far.EditorControl(ECTL_SELECT, &esel);

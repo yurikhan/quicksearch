@@ -8,24 +8,33 @@ $ #QuickSearch# v0.0.1.1
 
   #Operation:#
 
-  • Start the plugin from the Plugins menu or by a key macro.
-    ► The status line text changes to a #/#.
-  • Enter some characters.
-    ► The nearest occurence of the entered pattern is found and selected.
-    ► The status line displays the pattern.
+    • Start the plugin from the Plugins menu or by a key macro.
+      ► The status line text changes to a #/#.
+    • Enter some characters.
+      ► The nearest occurence of the entered pattern is found and selected.
+      ► The status line displays the pattern.
 
   #Keys:#
 
-  #Esc#       Cancel search and restore original position and block selection.
+    #Esc#       Cancel search and restore original position and block selection.
 
-  #Enter#     Exit search, leaving the current selection.
+    #Enter#     Exit search, leaving the current selection.
 
-  #Tab#       ^<wrap>Remember the current position and search for another pattern.
-The whole text between the first and second patterns will be selected.
+    #Tab#       ^<wrap>Remember the current position and search for a second pattern.
+The whole text between the first and second patterns will be selected. A second press
+of #Tab# discards the second pattern and returns to regular search.
 
-  #F3#        Find next occurence.
+    #F3#        Find next occurence.
 
-  #Shift-F3#  Find previous occurence.
+    #Shift-F3#  Find previous occurence.
+
+  #Tips & Tricks:#
+
+    • ^<wrap>Pressing #Tab# immediately after starting QuickSearch (i.e. when the first
+pattern is empty) will extend the existing block selection to include the second
+pattern.
+    • ^<wrap>If QuickSearch is invoked while a vertical block is selected, the search
+result will also be marked with a vertical block.
 
   ~License~@License@
 
