@@ -36,33 +36,6 @@ GetMsg(int msgId)
 	return Far.GetMsg(Far.ModuleNumber, msgId);
 }
 
-void
-DoMainMenu()
-{
-	try
-	{
-		FarMenuItemEx items[2] = { 0 };
-
-		items[0].Text = GetMsg(Msg::SearchForward);
-		items[1].Text = GetMsg(Msg::SearchBackward);
-
-		switch (Far.Menu(Far.ModuleNumber, -1, -1, 0, FMENU_USEEXT | FMENU_WRAPMODE, 0, 0, L"Contents", 0, 0,
-			reinterpret_cast<FarMenuItem const *>(items), 2))
-		{
-		case -1: return;
-		case 0: Start(false); return;
-		case 1: Start(true); return;
-		}
-	}
-	catch (std::exception const & e)
-	{
-		std::wostringstream oss;
-		oss << L"\n" << e.what();
-		Far.Message(Far.ModuleNumber, FMSG_WARNING | FMSG_ALLINONE | FMSG_MB_OK, 0,
-			reinterpret_cast<wchar_t const * const *>(oss.str().c_str()), 0, 0);
-	}
-}
-
 class SaveBlockAndPos
 {
 private:
@@ -170,6 +143,33 @@ public:
 
 	wchar_t const * c_str() { return buffer_; }
 };
+
+void
+DoMainMenu()
+{
+	try
+	{
+		FarMenuItemEx items[2] = { 0 };
+
+		items[0].Text = GetMsg(Msg::SearchForward);
+		items[1].Text = GetMsg(Msg::SearchBackward);
+
+		switch (Far.Menu(Far.ModuleNumber, -1, -1, 0, FMENU_USEEXT | FMENU_WRAPMODE, 0, 0, L"Contents", 0, 0,
+			reinterpret_cast<FarMenuItem const *>(items), 2))
+		{
+		case -1: return;
+		case 0: Start(false); return;
+		case 1: Start(true); return;
+		}
+	}
+	catch (std::exception const & e)
+	{
+		std::wostringstream oss;
+		oss << L"\n" << e.what();
+		Far.Message(Far.ModuleNumber, FMSG_WARNING | FMSG_ALLINONE | FMSG_MB_OK, 0,
+			reinterpret_cast<wchar_t const * const *>(oss.str().c_str()), 0, 0);
+	}
+}
 
 /*explicit*/
 QuickSearch::QuickSearch(bool backward)
