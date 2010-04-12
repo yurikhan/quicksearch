@@ -201,8 +201,6 @@ QuickSearch::QuickSearch(bool backward)
 	: hConIn_(win32::check_handle(GetStdHandle(STD_INPUT_HANDLE))), activePattern_(0), backward_(backward)
 {
 	SaveInfo();
-
-	Unselect();
 }
 
 int
