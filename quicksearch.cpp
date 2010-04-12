@@ -198,6 +198,17 @@ public:
 	void Run();
 };
 
+class ReadClipboard
+{
+private:
+	wchar_t const * buffer_;
+public:
+	ReadClipboard()	: buffer_(Fsf.PasteFromClipboard()) {}
+	~ReadClipboard() { Fsf.DeleteBuffer(const_cast<wchar_t *>(buffer_)); }
+
+	wchar_t const * c_str() { return buffer_; }
+};
+
 /*explicit*/
 QuickSearch::QuickSearch(bool backward)
 	: hConIn_(win32::check_handle(GetStdHandle(STD_INPUT_HANDLE))), activePattern_(0), backward_(backward)
@@ -339,6 +350,19 @@ QuickSearch::ProcessKey(KEY_EVENT_RECORD const & key)
 	{
 		patterns_[activePattern_] += key.uChar.UnicodeChar;
 		SearchAgain();
+		return true;
+	}
+
+	if (key.wVirtualKeyCode == VK_INSERT && shifts == SHIFT_PRESSED
+	||  key.wVirtualKeyCode == L'V'      &&  (shifts & (LEFT_CTRL_PRESSED|RIGHT_CTRL_PRESSED))
+										 && !(shifts &~(LEFT_CTRL_PRESSED|RIGHT_CTRL_PRESSED)))
+	{
+		ReadClipboard clip;
+		for (wchar_t const * pc = clip.c_str(); *pc; ++pc)
+		{
+			patterns_[activePattern_] += *pc;
+			SearchAgain();
+		}
 		return true;
 	}
 
