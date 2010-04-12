@@ -27,9 +27,8 @@ namespace Msg
 PluginStartupInfo Far;
 FARSTANDARDFUNCTIONS Fsf;
 
+void Start(bool backward);
 void DoMainMenu();
-void SearchForward();
-void SearchBackward();
 
 wchar_t const *
 GetMsg(int msgId)
@@ -51,8 +50,8 @@ DoMainMenu()
 			reinterpret_cast<FarMenuItem const *>(items), 2))
 		{
 		case -1: return;
-		case 0: SearchForward(); return;
-		case 1: SearchBackward(); return;
+		case 0: Start(false); return;
+		case 1: Start(true); return;
 		}
 	}
 	catch (std::exception const & e)
@@ -579,16 +578,9 @@ QuickSearch::NotFound()
 }
 
 void
-SearchForward()
+Start(bool backward)
 {
-	QuickSearch qs(false);
-	qs.Run();
-}
-
-void
-SearchBackward()
-{
-	QuickSearch qs(true);
+	QuickSearch qs(backward);
 	qs.Run();
 }
 
