@@ -3,3 +3,4 @@ EXPORTS
 	SetStartupInfoW
 	GetPluginInfoW
 	OpenPluginW
+	ProcessEditorInputW

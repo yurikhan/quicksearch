@@ -6,6 +6,8 @@
 #include <iomanip>
 #include <algorithm>
 #include <functional>
+#include <string>
+#include <map>
 
 #include <windows.h>
 
@@ -21,14 +23,12 @@ namespace Msg
 		SearchForward,
 		SearchBackward,
 		NotFound,
+		AlreadyActive,
 	};
 }
 
 PluginStartupInfo Far;
 FARSTANDARDFUNCTIONS Fsf;
-
-void Start(bool backward);
-void DoMainMenu();
 
 wchar_t const *
 GetMsg(int msgId)
@@ -96,12 +96,15 @@ class QuickSearch
 {
 private:
 
+	typedef std::map<int/*EditorID=>*/, QuickSearch> Instances;
+	static Instances instances_;
+
+	int id_;
 	bool backward_;
+	bool firstTime_;
+	wchar_t const * message_;
 
-	HANDLE hConIn_;
-
-	bool running_;
-	void Exit() { running_ = false; }
+	void Exit();
 
 	std::wstring patterns_[2];
 	size_t activePattern_;
@@ -112,6 +115,7 @@ private:
 	void SearchAgain();
 	void FindNext(bool backward, int startPos);
 	void ShowPattern(wchar_t const * message = 0);
+	void DeferShowPattern(wchar_t const * message = 0) { firstTime_ = true; message_ = message; }
 	void NotFound();
 
 	SaveBlockAndPos save_;
@@ -128,10 +132,17 @@ private:
 	bool IsModifierKey(KEY_EVENT_RECORD const & key) const;
 	bool IsCharKey(KEY_EVENT_RECORD const & key) const;
 public:
-	explicit QuickSearch(bool backward);
+	static void DoMainMenu();
+	static void Start(int editorID, bool backward);
+	static int ProcessEditorInput(INPUT_RECORD const & input);
+
+	explicit QuickSearch(int editorID, bool backward);
 
 	void Run();
 };
+
+/*static*/ QuickSearch::Instances
+QuickSearch::instances_;
 
 class ReadClipboard
 {
@@ -144,11 +155,14 @@ public:
 	wchar_t const * c_str() { return buffer_; }
 };
 
-void
-DoMainMenu()
+/*static*/ void
+QuickSearch::DoMainMenu()
 {
 	try
 	{
+		EditorInfo einfo;
+		Far.EditorControl(ECTL_GETINFO, &einfo);
+
 		FarMenuItemEx items[2] = { 0 };
 
 		items[0].Text = GetMsg(Msg::SearchForward);
@@ -158,8 +172,8 @@ DoMainMenu()
 			reinterpret_cast<FarMenuItem const *>(items), 2))
 		{
 		case -1: return;
-		case 0: Start(false); return;
-		case 1: Start(true); return;
+		case 0: Start(einfo.EditorID, false); return;
+		case 1: Start(einfo.EditorID, true); return;
 		}
 	}
 	catch (std::exception const & e)
@@ -172,8 +186,8 @@ DoMainMenu()
 }
 
 /*explicit*/
-QuickSearch::QuickSearch(bool backward)
-	: hConIn_(win32::check_handle(GetStdHandle(STD_INPUT_HANDLE))), activePattern_(0), backward_(backward)
+QuickSearch::QuickSearch(int editorID, bool backward)
+	: id_(editorID), activePattern_(0), backward_(backward)
 {
 	SaveInfo();
 }
@@ -266,27 +280,29 @@ QuickSearch::Unselect()
 void
 QuickSearch::Run()
 {
-	ShowPattern();
-	running_ = true;
-	while (running_)
-	{
-		win32::check(WaitForSingleObject(hConIn_, INFINITE), WAIT_FAILED);
+	firstTime_ = true;
+	message_ = 0;
+}
 
-		INPUT_RECORD input; DWORD eventsRead;
-		win32::check(PeekConsoleInput(hConIn_, &input, 1, &eventsRead));
-
-		if (!ProcessInput(input)) return;
-
-		ReadConsoleInput(hConIn_, &input, 1, &eventsRead);
-	}
+void
+QuickSearch::Exit()
+{
+	Far.EditorControl(ECTL_SETTITLE, 0);
+	instances_.erase(id_);
 }
 
 bool
 QuickSearch::ProcessInput(INPUT_RECORD const & input)
 {
+	if (firstTime_)
+	{
+		firstTime_ = false;
+		ShowPattern(message_);
+	}
 	switch (input.EventType)
 	{
 	case KEY_EVENT:
+	case FARMACRO_KEY_EVENT:
 		return ProcessKey(input.Event.KeyEvent);
 	case MOUSE_EVENT:
 		return ProcessMouse(input.Event.MouseEvent);
@@ -369,9 +385,6 @@ QuickSearch::ProcessKey(KEY_EVENT_RECORD const & key)
 
 	if (key.wVirtualKeyCode == VK_F1 && shifts == 0)
 	{
-		INPUT_RECORD input;
-		DWORD eventsRead;
-		ReadConsoleInput(hConIn_, &input, 1, &eventsRead);
 		Far.ShowHelp(Far.ModuleName, 0, FHELP_SELFHELP);
 		ShowPattern();
 		return true;
@@ -388,6 +401,7 @@ QuickSearch::ProcessKey(KEY_EVENT_RECORD const & key)
 		return true;
 	}
 
+	Exit();
 	return false;
 }
 
@@ -577,12 +591,32 @@ QuickSearch::NotFound()
 	ShowPattern(GetMsg(Msg::NotFound));
 }
 
-void
-Start(bool backward)
+/*static*/ void
+QuickSearch::Start(int editorID, bool backward)
 {
-	QuickSearch qs(backward);
-	qs.Run();
+	Instances::iterator it = instances_.lower_bound(editorID);
+	if (it != instances_.end() && it->first == editorID)
+	{
+		it->second.DeferShowPattern(GetMsg(Msg::AlreadyActive));
+		return;
+	}
+
+	instances_.insert(it, std::make_pair(editorID, QuickSearch(editorID, backward)))->second.Run();
 }
+
+/*static*/ int
+QuickSearch::ProcessEditorInput(INPUT_RECORD const & input)
+{
+	EditorInfo einfo;
+	Far.EditorControl(ECTL_GETINFO, &einfo);
+
+	Instances::iterator it = instances_.find(einfo.EditorID);
+	if (it == instances_.end()) return 0; // we're not running in this editor
+
+	if (it->second.ProcessInput(input)) return 1;
+	return 0;
+}
+
 
 extern "C" int WINAPI
 GetMinFarVersionW()
@@ -614,10 +648,15 @@ OpenPluginW(int OpenFrom, INT_PTR Item)
 	switch (OpenFrom)
 	{
 	case OPEN_EDITOR:
-		DoMainMenu();
+		QuickSearch::DoMainMenu();
 		return INVALID_HANDLE_VALUE;
 	default:
 		return INVALID_HANDLE_VALUE;
 	}
 }
 
+extern "C" int WINAPI
+ProcessEditorInputW(INPUT_RECORD const * input)
+{
+	return QuickSearch::ProcessEditorInput(*input);
+}
