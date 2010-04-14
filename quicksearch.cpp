@@ -465,9 +465,11 @@ QuickSearch::FindNext(bool backward, int startPos)
 	{
 		save.RestoreAll();
 		NotFound();
-		return;
 	}
-	found_[activePattern_] = next;
+	else
+	{
+		found_[activePattern_] = next;
+	}
 	EditorSelect esel = { save_.BlockType() == BTYPE_NONE ? BTYPE_STREAM : save_.BlockType(),
 		found_[0].line, found_[0].pos,
 		found_[activePattern_].pos + found_[activePattern_].length - found_[0].pos,
