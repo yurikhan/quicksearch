@@ -255,6 +255,8 @@ SaveBlockAndPos::RestorePos()
 {
 	EditorSetPosition esp = { saveInfo_.CurLine, saveInfo_.CurPos, -1, saveInfo_.TopScreenLine, saveInfo_.LeftPos, -1 };
 	Far.EditorControl(ECTL_SETPOSITION, &esp);
+
+	Far.EditorControl(ECTL_REDRAW, 0);
 }
 
 void
