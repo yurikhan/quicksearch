@@ -118,11 +118,7 @@ private:
 	void DeferShowPattern(wchar_t const * message = 0) { firstTime_ = true; message_ = message; }
 	void NotFound();
 
-	SaveBlockAndPos save_;
-	void SaveInfo();
-	void RestorePos() { save_.RestorePos(); }
-	void RestoreBlock() { save_.RestoreBlock(); }
-	void RestoreAll() { save_.RestoreAll(); }
+	SaveBlockAndPos save_[2];
 	void Unselect();
 	void SelectFound();
 
@@ -190,7 +186,9 @@ QuickSearch::DoMainMenu()
 QuickSearch::QuickSearch(int editorID, bool backward)
 	: id_(editorID), activePattern_(0), backward_(backward)
 {
-	SaveInfo();
+	save_[0].SaveInfo();
+
+	found_[0] = Found(save_[0].StartLine(), save_[0].StartPos(), 0);
 }
 
 int
@@ -237,17 +235,6 @@ SaveBlockAndPos::SaveInfo()
 		saveBlock_.BlockWidth = egs.SelEnd - saveBlock_.BlockStartPos;
 
 		RestorePos();
-	}
-}
-
-void
-QuickSearch::SaveInfo()
-{
-	save_.SaveInfo();
-
-	if (!found_[0])
-	{
-		found_[0] = Found(save_.StartLine(), save_.StartPos(), 0);
 	}
 }
 
@@ -356,7 +343,7 @@ QuickSearch::ProcessKey(KEY_EVENT_RECORD const & key)
 
 	if (key.wVirtualKeyCode == VK_ESCAPE && shifts == 0)
 	{
-		RestoreAll();
+		save_[0].RestoreAll();
 		Exit();
 		return true;
 	}
@@ -372,13 +359,13 @@ QuickSearch::ProcessKey(KEY_EVENT_RECORD const & key)
 		switch (activePattern_)
 		{
 		case 0:
-			SaveInfo();
+			save_[1].SaveInfo();
 			activePattern_ = 1;
 			break;
 		case 1:
-			RestoreAll();
 			patterns_[1].clear();
 			activePattern_ = 0;
+			SelectFound();
 			break;
 		}
 		ShowPattern();
@@ -452,8 +439,8 @@ void
 QuickSearch::SearchAgain()
 {
 	ShowPattern();
-	RestorePos();
-	FindNext(backward_ && activePattern_ == 0, save_.CurPos());
+	save_[activePattern_].RestorePos();
+	FindNext(backward_ && activePattern_ == 0, save_[activePattern_].CurPos());
 }
 
 void
