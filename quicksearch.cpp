@@ -336,7 +336,7 @@ QuickSearch::ProcessKey(KEY_EVENT_RECORD const & key)
 										 && !(shifts &~(LEFT_CTRL_PRESSED|RIGHT_CTRL_PRESSED)))
 	{
 		ReadClipboard clip;
-		for (wchar_t const * pc = clip.c_str(); *pc; ++pc)
+		for (wchar_t const * pc = clip.c_str(); pc && *pc; ++pc)
 		{
 			patterns_[activePattern_] += *pc;
 			SearchAgain();
