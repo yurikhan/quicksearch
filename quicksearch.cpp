@@ -289,6 +289,7 @@ QuickSearch::Exit()
 {
 	Far.EditorControl(ECTL_SETTITLE, 0);
 	instances_.erase(id_);
+	Far.EditorControl(ECTL_REDRAW, 0);
 }
 
 bool
