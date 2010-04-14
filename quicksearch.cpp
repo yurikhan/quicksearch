@@ -124,6 +124,7 @@ private:
 	void RestoreBlock() { save_.RestoreBlock(); }
 	void RestoreAll() { save_.RestoreAll(); }
 	void Unselect();
+	void SelectFound();
 
 	bool ProcessInput(INPUT_RECORD const & input);
 	bool ProcessKey(KEY_EVENT_RECORD const & key);
@@ -471,7 +472,16 @@ QuickSearch::FindNext(bool backward, int startPos)
 	{
 		found_[activePattern_] = next;
 	}
-	EditorSelect esel = { save_.BlockType() == BTYPE_NONE ? BTYPE_STREAM : save_.BlockType(),
+	SelectFound();
+
+	Far.EditorControl(ECTL_REDRAW, 0);
+}
+
+void
+QuickSearch::SelectFound()
+{
+	EditorSelect esel = {
+		save_[activePattern_].BlockType() == BTYPE_NONE ? BTYPE_STREAM : save_[activePattern_].BlockType(),
 		found_[0].line, found_[0].pos,
 		found_[activePattern_].pos + found_[activePattern_].length - found_[0].pos,
 		found_[activePattern_].line - found_[0].line + 1 };
@@ -480,8 +490,6 @@ QuickSearch::FindNext(bool backward, int startPos)
 	EditorSetPosition esp = { found_[activePattern_].line,
 		found_[activePattern_].pos + found_[activePattern_].length, -1, -1, -1, -1 };
 	Far.EditorControl(ECTL_SETPOSITION, &esp);
-
-	Far.EditorControl(ECTL_REDRAW, 0);
 }
 
 Found
