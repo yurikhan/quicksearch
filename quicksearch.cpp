@@ -289,6 +289,7 @@ QuickSearch::ProcessInput(INPUT_RECORD const & input)
 	{
 		firstTime_ = false;
 		ShowPattern(message_);
+		Far.EditorControl(ECTL_REDRAW, 0);
 	}
 	switch (input.EventType)
 	{
@@ -371,6 +372,7 @@ QuickSearch::ProcessKey(KEY_EVENT_RECORD const & key)
 			break;
 		}
 		ShowPattern();
+		Far.EditorControl(ECTL_REDRAW, 0);
 		return true;
 	}
 
@@ -378,17 +380,20 @@ QuickSearch::ProcessKey(KEY_EVENT_RECORD const & key)
 	{
 		Far.ShowHelp(Far.ModuleName, 0, FHELP_SELFHELP);
 		ShowPattern();
+		Far.EditorControl(ECTL_REDRAW, 0);
 		return true;
 	}
 
 	if (key.wVirtualKeyCode == VK_F3 && shifts == 0)
 	{
 		FindNext(false, found_[activePattern_].pos + found_[activePattern_].length);
+		Far.EditorControl(ECTL_REDRAW, 0);
 		return true;
 	}
 	if (key.wVirtualKeyCode == VK_F3 && shifts == SHIFT_PRESSED)
 	{
 		FindNext(true, found_[activePattern_].pos);
+		Far.EditorControl(ECTL_REDRAW, 0);
 		return true;
 	}
 
@@ -595,7 +600,6 @@ QuickSearch::ShowPattern(wchar_t const * message /*= 0*/)
 	}
 	if (message) oss << message;
 	Far.EditorControl(ECTL_SETTITLE, const_cast<wchar_t*>(oss.str().c_str()));
-	Far.EditorControl(ECTL_REDRAW, 0);
 }
 
 void
