@@ -115,7 +115,7 @@ private:
 	Found FindPatternForward(std::wstring const & pattern, int startPos);
 	Found FindPatternBackward(std::wstring const & pattern, int startPos);
 	void SearchAgain();
-	void FindNext(bool backward, int startPos);
+	bool FindNext(bool backward, int startPos);
 	void ShowPattern(wchar_t const * message = 0);
 	void DeferShowPattern(wchar_t const * message = 0) { firstTime_ = true; message_ = message; }
 	void NotFound();
@@ -386,8 +386,13 @@ QuickSearch::ProcessKey(KEY_EVENT_RECORD const & key)
 
 	if (key.wVirtualKeyCode == VK_F3 && (shifts & ~SHIFT_PRESSED) == 0)
 	{
-		FindNext(shifts == SHIFT_PRESSED,
-			found_[activePattern_].pos + (shifts == 0 ? found_[activePattern_].length : 0));
+		SaveBlockAndPos save;
+		save.SaveInfo();
+		if (!FindNext(shifts == SHIFT_PRESSED,
+			found_[activePattern_].pos + (shifts == 0 ? found_[activePattern_].length : 0)))
+		{
+			save.RestoreAll();
+		}
 		Far.EditorControl(ECTL_REDRAW, 0);
 		return true;
 	}
@@ -440,30 +445,32 @@ QuickSearch::IsCharKey(KEY_EVENT_RECORD const & key) const
 void
 QuickSearch::SearchAgain()
 {
-	ShowPattern();
-	save_[activePattern_].RestorePos();
-	FindNext(backward_ && activePattern_ == 0, save_[activePattern_].CurPos());
-}
-
-void
-QuickSearch::FindNext(bool backward, int startPos)
-{
 	SaveBlockAndPos save;
 	save.SaveInfo();
+	ShowPattern();
+	save_[activePattern_].RestorePos();
+	if (!FindNext(backward_ && activePattern_ == 0, save_[activePattern_].CurPos()))
+	{
+		save.RestoreAll();
+	}
+	Far.EditorControl(ECTL_REDRAW, 0);
+}
 
+bool
+QuickSearch::FindNext(bool backward, int startPos)
+{
 	Found next = FindPattern(patterns_[activePattern_], startPos, backward);
 	if (!next || activePattern_ == 1 && next < found_[0])
 	{
-		save.RestoreAll();
 		NotFound();
+		return false;
 	}
 	else
 	{
 		found_[activePattern_] = next;
+		SelectFound();
+		return true;
 	}
-	SelectFound();
-
-	Far.EditorControl(ECTL_REDRAW, 0);
 }
 
 void
