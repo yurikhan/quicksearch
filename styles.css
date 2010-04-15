@@ -15,7 +15,8 @@ li.bugfix
 {
   list-style-type: circle;
 }
-li.modification
+li.modification,
+li.performance
 {
   list-style-type: square;
 }
