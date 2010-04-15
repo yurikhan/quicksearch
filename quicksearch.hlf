@@ -3,7 +3,7 @@
 .Options CtrlStartPosChar=^<wrap>
 
 @Contents
-$ #QuickSearch# v0.0.2.1
+$ #QuickSearch# v0.0.2.4
   This plugin implements incremental search in FAR Manager internal editor.
 
   #Operation:#
