@@ -384,15 +384,10 @@ QuickSearch::ProcessKey(KEY_EVENT_RECORD const & key)
 		return true;
 	}
 
-	if (key.wVirtualKeyCode == VK_F3 && shifts == 0)
+	if (key.wVirtualKeyCode == VK_F3 && (shifts & ~SHIFT_PRESSED) == 0)
 	{
-		FindNext(false, found_[activePattern_].pos + found_[activePattern_].length);
-		Far.EditorControl(ECTL_REDRAW, 0);
-		return true;
-	}
-	if (key.wVirtualKeyCode == VK_F3 && shifts == SHIFT_PRESSED)
-	{
-		FindNext(true, found_[activePattern_].pos);
+		FindNext(shifts == SHIFT_PRESSED,
+			found_[activePattern_].pos + (shifts == 0 ? found_[activePattern_].length : 0));
 		Far.EditorControl(ECTL_REDRAW, 0);
 		return true;
 	}
