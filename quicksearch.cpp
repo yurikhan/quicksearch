@@ -7,7 +7,9 @@
 #include <algorithm>
 #include <functional>
 #include <string>
+#include <vector>
 #include <map>
+#include <limits>
 
 #include <windows.h>
 
@@ -485,22 +487,32 @@ QuickSearch::FindPattern(std::wstring const & pattern, int startPos, bool backwa
 	return backward ? FindPatternBackward(pattern, startPos) : FindPatternForward(pattern, startPos);
 }
 
-class case_equivalent : public std::binary_function<wchar_t, wchar_t, bool>
+int
+int_from_size(size_t size)
 {
-public:
-	bool operator()(wchar_t lhs, wchar_t rhs) const
-	{
-		return CSTR_EQUAL == win32::check(CompareString(LOCALE_USER_DEFAULT,
-			NORM_IGNORECASE | NORM_IGNOREKANATYPE |
-			NORM_IGNORENONSPACE | NORM_IGNOREWIDTH,
-			&lhs, 1,
-			&rhs, 1));
-	}
-};
+	return static_cast<int>((std::min)(size, size_t((std::numeric_limits<int>::max)())));
+}
+
+void
+to_upper(wchar_t const * in, int cchIn, std::vector<wchar_t> & out)
+{
+	out.resize(cchIn);
+
+	// LCMapString blows up if cchIn is 0
+	if (cchIn == 0) return;
+
+	win32::check(LCMapString(LOCALE_USER_DEFAULT,
+		LCMAP_LINGUISTIC_CASING | LCMAP_UPPERCASE,
+		in, cchIn,
+		&out[0], cchIn));
+}
 
 Found
 QuickSearch::FindPatternForward(std::wstring const & pattern, int startPos)
 {
+	std::vector<wchar_t> uc_pattern;
+	to_upper(pattern.c_str(), int_from_size(pattern.size()), uc_pattern);
+
 	EditorInfo einfo;
 	Far.EditorControl(ECTL_GETINFO, &einfo);
 
@@ -509,13 +521,13 @@ QuickSearch::FindPatternForward(std::wstring const & pattern, int startPos)
 		EditorGetString egs = { -1 };
 		Far.EditorControl(ECTL_GETSTRING, &egs);
 
-		wchar_t const * begin = egs.StringText + start;
-		wchar_t const * end = egs.StringText + egs.StringLength;
-		wchar_t const * found = std::search(begin, end,
-			pattern.begin(), pattern.end(),
-			case_equivalent());
-		int foundPos = found == end ? -1 : static_cast<int>(found - begin);
-		int foundLength = static_cast<int>(pattern.size());
+		std::vector<wchar_t> uc_line;
+		to_upper(egs.StringText + start, egs.StringLength - start, uc_line);
+
+		std::vector<wchar_t>::iterator found = std::search(uc_line.begin(), uc_line.end(),
+			uc_pattern.begin(), uc_pattern.end());
+		int foundPos = found == uc_line.end() ? -1 : static_cast<int>(found - uc_line.begin());
+		int foundLength = static_cast<int>(uc_pattern.size());
 
 		if (foundPos >= 0)
 		{
@@ -534,6 +546,9 @@ QuickSearch::FindPatternForward(std::wstring const & pattern, int startPos)
 Found
 QuickSearch::FindPatternBackward(std::wstring const & pattern, int startPos)
 {
+	std::vector<wchar_t> uc_pattern;
+	to_upper(pattern.c_str(), int_from_size(pattern.size()), uc_pattern);
+
 	EditorInfo einfo;
 	Far.EditorControl(ECTL_GETINFO, &einfo);
 
@@ -542,14 +557,14 @@ QuickSearch::FindPatternBackward(std::wstring const & pattern, int startPos)
 
 	for (int start = egs.StringLength - startPos;; start = 0)
 	{
-		std::reverse_iterator<wchar_t const *>
-			begin(egs.StringText + egs.StringLength - start),
-			end(egs.StringText),
-			found(std::search(begin, end,
-				pattern.rbegin(), pattern.rend(),
-				case_equivalent()));
-		int foundPos = found == end ? -1 : static_cast<int>(end - found - pattern.size());
-		int foundLength = static_cast<int>(pattern.size());
+		std::vector<wchar_t> uc_line;
+		to_upper(egs.StringText, egs.StringLength - start, uc_line);
+
+		std::vector<wchar_t>::reverse_iterator
+			found(std::search(uc_line.rbegin(), uc_line.rend(),
+				uc_pattern.rbegin(), uc_pattern.rend()));
+		int foundPos = found == uc_line.rend() ? -1 : static_cast<int>(uc_line.rend() - found - uc_pattern.size());
+		int foundLength = static_cast<int>(uc_pattern.size());
 
 		if (foundPos >= 0)
 		{
