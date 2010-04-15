@@ -523,11 +523,11 @@ QuickSearch::FindPatternForward(std::wstring const & pattern, int startPos)
 	EditorInfo einfo;
 	Far.EditorControl(ECTL_GETINFO, &einfo);
 
-	for (int start = startPos;; start = 0)
-	{
-		EditorGetString egs = { -1 };
-		Far.EditorControl(ECTL_GETSTRING, &egs);
+	EditorGetString egs = { -1 };
+	Far.EditorControl(ECTL_GETSTRING, &egs);
 
+	for (int start = (std::min)(startPos, egs.StringLength);; start = 0)
+	{
 		std::vector<wchar_t> uc_line;
 		to_upper(egs.StringText + start, egs.StringLength - start, uc_line);
 
@@ -548,6 +548,9 @@ QuickSearch::FindPatternForward(std::wstring const & pattern, int startPos)
 	    }
 		EditorSetPosition esp = { einfo.CurLine, -1, -1, -1, -1, -1 };
 		Far.EditorControl(ECTL_SETPOSITION, &esp);
+
+		egs.StringNumber = -1;
+		Far.EditorControl(ECTL_GETSTRING, &egs);
 	}
 }
 Found
@@ -562,7 +565,7 @@ QuickSearch::FindPatternBackward(std::wstring const & pattern, int startPos)
 	EditorGetString egs = { -1 };
 	Far.EditorControl(ECTL_GETSTRING, &egs);
 
-	for (int start = egs.StringLength - startPos;; start = 0)
+	for (int start = (std::max)(0, egs.StringLength - startPos);; start = 0)
 	{
 		std::vector<wchar_t> uc_line;
 		to_upper(egs.StringText, egs.StringLength - start, uc_line);
