@@ -491,6 +491,13 @@ QuickSearch::SelectFound()
 Found
 QuickSearch::FindPattern(std::wstring const & pattern, int startPos, bool backward)
 {
+	if (pattern.empty())
+	{
+		EditorInfo einfo;
+		Far.EditorControl(ECTL_GETINFO, &einfo);
+
+		return Found(einfo.CurLine, einfo.CurPos, 0);
+	}
 	return backward ? FindPatternBackward(pattern, startPos) : FindPatternForward(pattern, startPos);
 }
 
