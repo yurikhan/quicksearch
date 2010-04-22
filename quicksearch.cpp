@@ -25,7 +25,6 @@ namespace Msg
 		SearchForward,
 		SearchBackward,
 		NotFound,
-		AlreadyActive,
 	};
 }
 
@@ -624,13 +623,16 @@ QuickSearch::NotFound()
 QuickSearch::Start(int editorID, bool backward)
 {
 	Instances::iterator it = instances_.lower_bound(editorID);
+
 	if (it != instances_.end() && it->first == editorID)
 	{
-		it->second.DeferShowPattern(GetMsg(Msg::AlreadyActive));
-		return;
+		it->second = QuickSearch(editorID, backward);
 	}
-
-	instances_.insert(it, std::make_pair(editorID, QuickSearch(editorID, backward)))->second.Run();
+	else
+	{
+		it = instances_.insert(it, std::make_pair(editorID, QuickSearch(editorID, backward)));
+	}
+	it->second.Run();
 }
 
 /*static*/ int
