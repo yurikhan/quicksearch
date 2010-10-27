@@ -107,13 +107,15 @@ private:
 
 	void Exit();
 
+	static bool RestrictInput();
+
 	std::wstring patterns_[2];
 	size_t activePattern_;
 	Found found_[2];
 	Found FindPattern(std::wstring const & pattern, int startPos, bool backward = false);
 	Found FindPatternForward(std::wstring const & pattern, int startPos);
 	Found FindPatternBackward(std::wstring const & pattern, int startPos);
-	void SearchAgain();
+	bool SearchAgain();
 	bool FindNext(bool backward, int startPos);
 	void ShowPattern(wchar_t const * message = 0);
 	void DeferShowPattern(wchar_t const * message = 0) { firstTime_ = true; message_ = message; }
@@ -318,7 +320,10 @@ QuickSearch::ProcessKey(KEY_EVENT_RECORD const & key)
 	if (IsCharKey(key))
 	{
 		patterns_[activePattern_] += key.uChar.UnicodeChar;
-		SearchAgain();
+		if (!SearchAgain() && RestrictInput())
+		{
+			patterns_[activePattern_].resize(patterns_[activePattern_].size() - 1);
+		}
 		return true;
 	}
 
@@ -330,7 +335,11 @@ QuickSearch::ProcessKey(KEY_EVENT_RECORD const & key)
 		for (wchar_t const * pc = clip.c_str(); pc && *pc; ++pc)
 		{
 			patterns_[activePattern_] += *pc;
-			SearchAgain();
+			if (!SearchAgain() && RestrictInput())
+			{
+				patterns_[activePattern_].resize(patterns_[activePattern_].size() - 1);
+				return true;
+			}
 		}
 		return true;
 	}
@@ -441,18 +450,20 @@ QuickSearch::IsCharKey(KEY_EVENT_RECORD const & key) const
 		&& (ctrlAlt == 0 ||	ctrlAlt == (LEFT_CTRL_PRESSED | RIGHT_ALT_PRESSED));
 }
 
-void
+bool
 QuickSearch::SearchAgain()
 {
 	SaveBlockAndPos save;
 	save.SaveInfo();
 	ShowPattern();
 	save_[activePattern_].RestorePos();
-	if (!FindNext(backward_ && activePattern_ == 0, save_[activePattern_].CurPos()))
+	bool result = FindNext(backward_ && activePattern_ == 0, save_[activePattern_].CurPos());
+	if (!result)
 	{
 		save.RestoreAll();
 	}
 	Far.EditorControl(ECTL_REDRAW, 0);
+	return result;
 }
 
 bool
@@ -646,6 +657,67 @@ QuickSearch::ProcessEditorInput(INPUT_RECORD const & input)
 
 	if (it->second.ProcessInput(input)) return 1;
 	return 0;
+}
+
+namespace win32
+{
+
+class bad_type : public std::runtime_error
+{
+public:
+	bad_type() : std::runtime_error("Bad registry value type") {}
+};
+
+class RegistryKey
+{
+private:
+	RegistryKey(const RegistryKey&) /*= delete*/;
+	RegistryKey& operator=(const RegistryKey&) /*= delete*/;
+
+	HKEY hKey_;
+public:
+	RegistryKey(HKEY hKey, wchar_t const * subkey, REGSAM samDesired)
+	{
+		if (LONG errorCode = RegOpenKeyEx(hKey, subkey, 0, samDesired, &hKey_))
+		{
+			throw win32::exception(errorCode);
+		}
+	}
+	~RegistryKey()
+	{
+		RegCloseKey(hKey_);
+	}
+
+	DWORD QueryDwordValue(wchar_t const * name) const
+	{
+		DWORD type;
+		DWORD data;
+		DWORD size = sizeof(data);
+		if (LONG errorCode = RegQueryValueEx(hKey_, name, 0, &type, reinterpret_cast<LPBYTE>(&data), &size))
+		{
+			throw win32::exception(errorCode);
+		}
+		if (type != REG_DWORD) throw win32::bad_type();
+		return data;
+	}
+};
+
+}
+
+/*static*/ bool
+QuickSearch::RestrictInput()
+{
+	try
+	{
+		return win32::RegistryKey(HKEY_CURRENT_USER,
+				(std::wstring(Far.RootKey) + L"\\QuickSearch").c_str(),
+				KEY_QUERY_VALUE)
+			.QueryDwordValue(L"RestrictInput") != 0;
+	}
+	catch (...)
+	{
+		return false;
+	}
 }
 
 
