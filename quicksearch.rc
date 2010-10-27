@@ -1,6 +1,6 @@
 1	VERSIONINFO
-	FILEVERSION 0,0,2,5
-	PRODUCTVERSION 0,0,2,5
+	FILEVERSION 0,0,2,6
+	PRODUCTVERSION 0,0,2,6
 	FILEOS 4
 	FILETYPE 2
 {
@@ -10,11 +10,11 @@
 		{
 			VALUE "CompanyName", "Yuri Khan"
 			VALUE "FileDescription", "QuickSearch FAR plugin (Unicode)"
-			VALUE "FileVersion", "0.0.2.5"
+			VALUE "FileVersion", "0.0.2.6"
 			VALUE "InternalName", "quicksearch"
 			VALUE "OriginalFilename", "quicksearch.dll"
 			VALUE "ProductName", "QuickSearch"
-			VALUE "ProductVersion", "0.0.2.5"
+			VALUE "ProductVersion", "0.0.2.6"
 		}
 	}
 	BLOCK "VarFileInfo"
